@@ -16,6 +16,8 @@ const char *site = "http://www.asahi.com/sports/baseball/npb/game/";
 const int maxNumberOfGames = 6;
 /* display time for each page in msec */
 const int displayTime = 10000;
+/* HTML refresh interval in msec */
+const int refreshInterval = 60000;
 
 /* OLED display size: 20x2 */
 const int displayHeight = 2;
@@ -44,9 +46,6 @@ enum {NONE, GAMESTATE, TEAM, SCORE} status;
 /* buffer to store data from HTML */
 char buffer[64];
 int bufferPos;
-
-/* HTML refresh interval in msec */
-int refreshInterval = 60000;
 
 /* semaphore */
 SemaphoreHandle_t semaphore = NULL;
