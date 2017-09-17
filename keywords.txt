@@ -1,0 +1,34 @@
+#######################################
+# Syntax Coloring Map For ExampleLibrary
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+attribute_t	KEYWORDS1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+parse				KEYWORD2
+getCharFunction		KEYWORD2
+foundXMLDecl		KEYWORD2
+foundXMLEnd			KEYWORD2
+foundPI				KEYWORD2
+foundSTag			KEYWORD2
+foundETag			KEYWORD2
+foundEmptyElemTag	KEYWORD2
+foundSection		KEYWORD2
+foundCharacter		KEYWORD2
+foundElement		KEYWORD2
+
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+#######################################
+# Constants (LITERAL1)
+#######################################
