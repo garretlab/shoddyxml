@@ -39,10 +39,6 @@ struct {
 /* the number of games in the HTML */
 int numGames = 0;
 
-/* team and score has two elements. which one to use */
-int teamIndex = 0;
-int scoreIndex = 0;
-
 /* HTML analyzing status */
 enum {NONE, GAMESTATE, TEAM, SCORE} status;
 /* buffer to store data from HTML */
@@ -189,6 +185,8 @@ void getGameInformation(char *s) {
 
 /* convert team name in Japanese to alphabet */
 void converTeamName(char *s) {
+  static int teamIndex = 0;
+
   /* team name in the HTML and how it be displayed on the OLED display */
   struct {
     char *team;
@@ -212,6 +210,8 @@ void converTeamName(char *s) {
 
 /* get score from HTML */
 void getScore(char *s) {
+  static int scoreIndex = 0;
+  
   if (strcmp(s, "　") != 0) {
     score[numGames - 1].score[scoreIndex] = atol(s);
   } else {
@@ -257,8 +257,6 @@ void foundPI(char *s) {
 }
 
 void foundSTag(char *sTag, int numAttributes, attribute_t attributes[]) {
-  static int teamIndex = 0;
-
   switch (status) {
     case NONE:
       if (numAttributes && checkStatus(sTag, attributes)) {
