@@ -138,6 +138,7 @@ void getDate(char *s) {
     gameDate[n++] = '/';
   }
   gameDate[--n] = '\0';
+  Serial.println(gameDate);
 }
 
 /* get game state from HTML*/
@@ -236,25 +237,27 @@ void getScore(char *s) {
 
 /* check if the tag is for date */
 int checkDate(char *sTag, int numAttributes, attribute_t attributes[]) {
-  static enum {NONE, TITLE, H2, DATE} dateStatus = NONE;
+  static enum {NONE, TITLE, H2} dateStatus = NONE;
 
   switch (dateStatus) {
     case NONE:
       if (numAttributes &&
           (strcmp(sTag, "div") == 0) &&
           (strcmp(attributes[0].name, "class") == 0) &&
-          (strcmp(attributes[0].attValue, "Title"))) {
+          (strcmp(attributes[0].attValue, "Title") == 0)) {
         dateStatus = TITLE;
       }
       break;
     case TITLE:
       if (strcmp(sTag, "h2") == 0) {
         dateStatus = H2;
+      } else {
+        dateStatus = NONE;
       }
       break;
     case H2:
+      dateStatus = NONE;
       if (strcmp(sTag, "span") == 0) {
-        dateStatus = DATE;
         return 1;
       }
       break;
@@ -388,7 +391,6 @@ void setup() {
   // put your setup code here, to run once:
   oled.begin(displayWidth, displayHeight);
   oled.clear();
-  Serial.begin(115200);
 
   wifiMulti.addAP(ssid, password);
 
