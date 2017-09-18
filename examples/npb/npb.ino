@@ -155,7 +155,7 @@ void getGameState(char *s) {
     {"　５回", "5th"}, {"　６回", "6th"}, {"　７回", "7th"}, {"　８回", "8th"},
     {"　９回", "9th"}, {"　１０回", "10th"}, {"　１１回", "11th"}, {"　１２回", "12th"},
   };
-  char *headOrTail[] = {"表", "裏"};
+  char *topOrBottom[] = {"表", "裏"};
 
   struct {
     char *state;
@@ -166,14 +166,14 @@ void getGameState(char *s) {
 
   char t[32];
   loopNum1 = sizeof(inning) / sizeof(inning[0]);
-  loopNum2 = sizeof(headOrTail) / sizeof(headOrTail[0]);
+  loopNum2 = sizeof(topOrBottom) / sizeof(topOrBottom[0]);
   for (int j = 0; j < loopNum1; j++) {
     for (int k = 0; k < loopNum2; k++) {
       strcpy(t, inning[j].inning);
-      strcat(t, headOrTail[k]);
+      strcat(t, topOrBottom[k]);
       if (strstr(s, t)) {
         strcpy(score[numGames - 1].info[0], inning[j].inningString);
-        strcpy(score[numGames - 1].info[1], k == 0 ? "Head" : "Tail");
+        strcpy(score[numGames - 1].info[1], k == 0 ? "Top" : "Bot");
         return;
       }
     }
