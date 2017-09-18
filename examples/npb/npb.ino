@@ -24,25 +24,26 @@ const int displayHeight = 2;
 const int displayWidth = 20;
 /* shared variable between tasks */
 struct {
-  char displayBuffer[maxNumberOfGames][displayHeight][displayWidth + 1];
-  int numberOfGames;
+  char displayBuffer[maxNumberOfGames + 1][displayHeight][displayWidth + 1];
+  int numberOfPages;
 } gameDisplayInfo;
 
 /* function to get a web page */
 int httpGetChar();
 
+char gameDate[6];
 /* score information */
 struct {
-  char team[2][10];  /* two teams */
+  char teamName[2][10];  /* two teams */
   int score[2];  /* two teams */
-  char info[2][10]; /* inning, status */
+  char info[2][11]; /* inning, status */
 } score[maxNumberOfGames];
 
 /* the number of games in the HTML */
 int numGames = 0;
 
 /* HTML analyzing status */
-enum {NONE, GAMESTATE, TEAM, SCORE} status;
+enum {NONE, DATE, GAMESTATE, TEAM, SCORE} status;
 /* buffer to store data from HTML */
 char buffer[64];
 int bufferPos;
@@ -59,20 +60,20 @@ shoddyxml x(httpGetChar);
 /* print display buffer. */
 /* this function is executed on different task */
 void printScores(void *args) {
-  int numberOfGames;
+  int numberOfPages;
   while (1) {
     if (xSemaphoreTake(semaphore, 10)) {
-      numberOfGames = gameDisplayInfo.numberOfGames;
+      numberOfPages = gameDisplayInfo.numberOfPages;
       xSemaphoreGive(semaphore);
     }
-    for (int i = 0; i < numberOfGames; i++) {
+    for (int i = 0; i < numberOfPages; i++) {
       if (xSemaphoreTake(semaphore, 10)) {
         for (int j = 0; j < 2; j++) {
           oled.setCursor(0, j);
           oled.print(gameDisplayInfo.displayBuffer[i][j]);
         }
         xSemaphoreGive(semaphore);
-        if (numberOfGames != gameDisplayInfo.numberOfGames) {
+        if (numberOfPages != gameDisplayInfo.numberOfPages) {
           break;
         }
         delay(displayTime);
@@ -85,7 +86,7 @@ void printScores(void *args) {
 
 void setDisplayBufferFixed(char *s1, char *s2) {
   if (xSemaphoreTake(semaphore, 0)) {
-    gameDisplayInfo.numberOfGames = 1;
+    gameDisplayInfo.numberOfPages = 1;
     sprintf(gameDisplayInfo.displayBuffer[0][0], "%-20s", s1);
     sprintf(gameDisplayInfo.displayBuffer[0][1], "%-20s", s2);
     xSemaphoreGive(semaphore);
@@ -95,20 +96,19 @@ void setDisplayBufferFixed(char *s1, char *s2) {
 /* set display buffer. should be protected by semaphore */
 void setDisplayBuffer() {
   if (xSemaphoreTake(semaphore, 0)) {
-    gameDisplayInfo.numberOfGames = numGames;
+    gameDisplayInfo.numberOfPages = numGames + 1;
     if (numGames == 0) {
-      gameDisplayInfo.numberOfGames = 1;
-      sprintf(gameDisplayInfo.displayBuffer[0][0], "No game available.  ");
-      sprintf(gameDisplayInfo.displayBuffer[0][1], "                    ");
+      setDisplayBufferFixed("No game available.", "");
     } else {
+      sprintf(gameDisplayInfo.displayBuffer[0][0], "NPB Scores     %5s", gameDate);
+      sprintf(gameDisplayInfo.displayBuffer[0][1], "                    ");
       for (int i = 0; i < numGames; i++) {
-
         if (score[i].score[0] == -1) {
-          sprintf(gameDisplayInfo.displayBuffer[i][0], "%-9s %10s", score[i].team[0], score[i].info[0]);
-          sprintf(gameDisplayInfo.displayBuffer[i][1], "%-9s %10s", score[i].team[1], score[i].info[1]);
+          sprintf(gameDisplayInfo.displayBuffer[i + 1][0], "%-9s %10s", score[i].teamName[0], score[i].info[0]);
+          sprintf(gameDisplayInfo.displayBuffer[i + 1][1], "%-9s %10s", score[i].teamName[1], score[i].info[1]);
         } else {
-          sprintf(gameDisplayInfo.displayBuffer[i][0], "%-9s %2d %7s", score[i].team[0], score[i].score[0], score[i].info[0]);
-          sprintf(gameDisplayInfo.displayBuffer[i][1], "%-9s %2d %7s", score[i].team[1], score[i].score[1], score[i].info[1]);
+          sprintf(gameDisplayInfo.displayBuffer[i + 1][0], "%-9s %2d %7s", score[i].teamName[0], score[i].score[0], score[i].info[0]);
+          sprintf(gameDisplayInfo.displayBuffer[i + 1][1], "%-9s %2d %7s", score[i].teamName[1], score[i].score[1], score[i].info[1]);
         }
       }
     }
@@ -119,17 +119,32 @@ void setDisplayBuffer() {
 /* clear game status with '\0' */
 void clearGameInformation() {
   numGames = 0;
+  gameDate[0] = '\0';
   for (int i = 0; i < maxNumberOfGames; i++) {
     score[i].info[0][0] = '\0';
     score[i].info[1][0] = '\0';
   }
 }
 
+/* get date from HTML */
+void getDate(char *s) {
+  int n = 0;
+
+  for (int i = 0; i < 2; i++) {
+    s += 3;
+    while (*s != 0xe6) {
+      gameDate[n++] = *s++;
+    }
+    gameDate[n++] = '/';
+  }
+  gameDate[--n] = '\0';
+}
+
 /* get game state from HTML*/
 /* game state looks like
     ヤクルト 対 中日　終了
 */
-void getGameInformation(char *s) {
+void getGameState(char *s) {
   int loopNum1, loopNum2;
 
   struct {
@@ -183,7 +198,7 @@ void getGameInformation(char *s) {
 }
 
 /* convert team name in Japanese to alphabet */
-void converTeamName(char *s) {
+void getTeamName(char *s) {
   static int teamIndex = 0;
 
   /* team name in the HTML and how it be displayed on the OLED display */
@@ -200,7 +215,7 @@ void converTeamName(char *s) {
   int loopNum = sizeof(teamTable) / sizeof(teamTable[0]);
   for (int i = 0; i < loopNum; i++) {
     if (strcmp(s, teamTable[i].team) == 0) {
-      strcpy(score[numGames - 1].team[teamIndex], teamTable[i].displayName);
+      strcpy(score[numGames - 1].teamName[teamIndex], teamTable[i].displayName);
       teamIndex = 1 - teamIndex; /* invert. 0->1, 1->0 */
       return;
     }
@@ -210,7 +225,7 @@ void converTeamName(char *s) {
 /* get score from HTML */
 void getScore(char *s) {
   static int scoreIndex = 0;
-  
+
   if (strcmp(s, "　") != 0) {
     score[numGames - 1].score[scoreIndex] = atol(s);
   } else {
@@ -219,8 +234,38 @@ void getScore(char *s) {
   scoreIndex = 1 - scoreIndex; /* invert. 0->1, 1->0 */
 }
 
+/* check if the tag is for date */
+int checkDate(char *sTag, int numAttributes, attribute_t attributes[]) {
+  static enum {NONE, TITLE, H2, DATE} dateStatus = NONE;
+
+  switch (dateStatus) {
+    case NONE:
+      if (numAttributes &&
+          (strcmp(sTag, "div") == 0) &&
+          (strcmp(attributes[0].name, "class") == 0) &&
+          (strcmp(attributes[0].attValue, "Title"))) {
+        dateStatus = TITLE;
+      }
+      break;
+    case TITLE:
+      if (strcmp(sTag, "h2") == 0) {
+        dateStatus = H2;
+      }
+      break;
+    case H2:
+      if (strcmp(sTag, "span") == 0) {
+        dateStatus = DATE;
+        return 1;
+      }
+      break;
+    default:
+      break;
+  }
+  return 0;
+}
+
 /* check if the tag is for game status */
-int checkStatus(char *sTag, attribute_t attributes[]) {
+int checkGameState(char *sTag, attribute_t attributes[]) {
   if ((strcmp(sTag, "div") == 0) &&
       (strcmp(attributes[0].name, "class") == 0) &&
       (strcmp(attributes[0].attValue, "GameState") == 0)) {
@@ -258,21 +303,21 @@ void foundPI(char *s) {
 void foundSTag(char *sTag, int numAttributes, attribute_t attributes[]) {
   switch (status) {
     case NONE:
-      if (numAttributes && checkStatus(sTag, attributes)) {
+      if (checkDate(sTag, numAttributes, attributes)) {
+        status = DATE;
+      } else if (numAttributes && checkGameState(sTag, attributes)) {
         status = GAMESTATE;
-        bufferPos = 0;
       } else if (numAttributes && checkTeam(sTag, attributes)) {
         status = TEAM;
-        bufferPos = 0;
       } else if (numAttributes && checkScore(sTag, attributes)) {
         status = SCORE;
-        bufferPos = 0;
       }
+      bufferPos = 0;
       break;
     case GAMESTATE:
       buffer[bufferPos] = '\0';
       numGames++;
-      getGameInformation(buffer);
+      getGameState(buffer);
       status = NONE;
       break;
     default:
@@ -283,15 +328,20 @@ void foundSTag(char *sTag, int numAttributes, attribute_t attributes[]) {
 
 void foundETag(char *s) {
   switch (status) {
+    case DATE:
+      buffer[bufferPos] = '\0';
+      getDate(buffer);
+      status = NONE;
+      break;
     case GAMESTATE:
       buffer[bufferPos] = '\0';
       numGames++;
-      getGameInformation(buffer);
+      getGameState(buffer);
       status = NONE;
       break;
     case TEAM:
       buffer[bufferPos] = '\0';
-      converTeamName(buffer);
+      getTeamName(buffer);
       status = NONE;
       break;
     case SCORE:
@@ -309,6 +359,7 @@ void foundEmptyElemTag(char *s, int numAttributes, attribute_t attributes[]) {
 
 void foundCharacter(char c) {
   switch (status) {
+    case DATE:
     case GAMESTATE:
     case TEAM:
     case SCORE:
@@ -337,6 +388,7 @@ void setup() {
   // put your setup code here, to run once:
   oled.begin(displayWidth, displayHeight);
   oled.clear();
+  Serial.begin(115200);
 
   wifiMulti.addAP(ssid, password);
 
