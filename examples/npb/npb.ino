@@ -15,7 +15,7 @@ const char *site = "http://www.asahi.com/sports/baseball/npb/game/";
 /* maximum number of games */
 const int maxNumberOfGames = 6;
 /* display time for each page in msec */
-const int displayTime = 10000;
+const int displayTime = 4000;
 /* HTML refresh interval in msec */
 const int refreshInterval = 60000;
 
@@ -97,11 +97,12 @@ void setDisplayBufferFixed(char *s1, char *s2) {
 void setDisplayBuffer() {
   if (xSemaphoreTake(semaphore, 0)) {
     gameDisplayInfo.numberOfPages = numGames + 1;
+    sprintf(gameDisplayInfo.displayBuffer[0][0], "NPB Scores     %5s", gameDate);
     if (numGames == 0) {
-      setDisplayBufferFixed("No game available.", "");
+      // setDisplayBufferFixed("No game available.", "");
+      sprintf(gameDisplayInfo.displayBuffer[0][1], "No game available.  ");
     } else {
-      sprintf(gameDisplayInfo.displayBuffer[0][0], "NPB Scores     %5s", gameDate);
-      sprintf(gameDisplayInfo.displayBuffer[0][1], "                    ");
+      sprintf(gameDisplayInfo.displayBuffer[0][1], "%14d game%c", numGames, numGames == 1 ? ' ' : 's');
       for (int i = 0; i < numGames; i++) {
         if (score[i].score[0] == -1) {
           sprintf(gameDisplayInfo.displayBuffer[i + 1][0], "%-9s %10s", score[i].teamName[0], score[i].info[0]);
@@ -138,7 +139,6 @@ void getDate(char *s) {
     gameDate[n++] = '/';
   }
   gameDate[--n] = '\0';
-  Serial.println(gameDate);
 }
 
 /* get game state from HTML*/
