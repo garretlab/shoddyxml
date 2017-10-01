@@ -12,7 +12,7 @@ class shoddyxml {
   void parse();
 
   char stringBuffer[32];
-  attribute_t attributes[16];
+  attribute_t *attributes;
   int numAttributes;
 
   /* user supplied functions */
@@ -31,8 +31,8 @@ class shoddyxml {
   private:
   enum status_t {
     INXML, LEFTBRACKET, MAYBELBEX, 
-    INPI, INSTAG, INETAG, INLBEX,
-    INSECTION, INCDATA, INCHARACTER, MAYBECOMMENT, INCOMMENT, INELEMENT
+    INPI, INSTAG, INETAG, INSECTION, INCDATA, 
+    INCHARACTER, MAYBECOMMENT, INCOMMENT, INELEMENT
   } status;
   int subStatus;
 

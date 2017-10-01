@@ -1,6 +1,7 @@
 #include "shoddyxml.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <Arduino.h>
 
 /* public methds */
@@ -10,7 +11,8 @@ shoddyxml::shoddyxml(int (*getCharFunction)()) {
   laPosition = -1;
 
   this->getCharFunction = getCharFunction;
-
+  attributes = NULL;
+  numAttributes = 0;
   resetStatus();
 }
 
@@ -23,10 +25,16 @@ void shoddyxml::resetStatus() {
   for (int i = 0; i < numAttributes; i++) {
     if (attributes[i].name) {
       free(attributes[i].name);
+      attributes[i].name = NULL;
     }
     if (attributes[i].attValue) {
       free(attributes[i].attValue);
+      attributes[i].attValue = NULL;
     }
+  }
+  if (attributes) {
+    free(attributes);
+    attributes = NULL;
   }
   numAttributes = 0;
 }
@@ -53,9 +61,6 @@ void shoddyxml::parse() {
         break;
       case INETAG:
         parseInETag(c);
-        break;
-      case INLBEX:
-        parseInLBEx(c);
         break;
       case INSECTION:
         parseInSection(c);
@@ -198,9 +203,9 @@ void shoddyxml::parseInPI(int c) {
 }
 
 void shoddyxml::parseInSTag(int c) { // <
-  static int nameLength = 1;
+  static int attNameLength = 1;
   static int attValueLength = 0;
-  static char *name = NULL;
+  static char *attName = NULL;
   static char *attValue = NULL;
 
   switch (subStatus) {
@@ -241,7 +246,7 @@ void shoddyxml::parseInSTag(int c) { // <
     case 2: // attribute name
       if (c == '=') {
         subStatus = 3;
-        name[nameLength - 1] = 0;
+        attName[attNameLength - 1] = 0;
       } else if (c == '/') {
         subStatus = 5;
       } else if (c == '>') {  // <stag name="attValue">
@@ -252,8 +257,8 @@ void shoddyxml::parseInSTag(int c) { // <
           resetStatus();
         }
       } else {
-        name = (char *)realloc(name, ++nameLength);
-        name[nameLength - 2] = c;
+        attName = (char *)realloc(attName, ++attNameLength);
+        attName[attNameLength - 2] = c;
       }
       break;
     case 3: // Eq
@@ -265,12 +270,13 @@ void shoddyxml::parseInSTag(int c) { // <
       attValue = (char *)realloc(attValue, ++attValueLength);
       if (c == '\"') {
         attValue[attValueLength - 1] = 0;
-        attributes[numAttributes].name = strdup(name);
+        attributes = (attribute_t *)realloc(attributes, (numAttributes + 1) * sizeof(attribute_t));
+        attributes[numAttributes].name = strdup(attName);
         attributes[numAttributes].attValue = strdup(attValue);
         numAttributes++;
-        free(name);
-        name = 0;
-        nameLength = 1;
+        free(attName);
+        attName = 0;
+        attNameLength = 1;
 
         free(attValue);
         attValue = 0;
@@ -322,10 +328,6 @@ void shoddyxml::parseInETag(int c) {
       stringBuffer[sbPosition++] = c;
     }
   }
-}
-
-void shoddyxml::parseInLBEx(int c) {
-
 }
 
 void shoddyxml::parseInSection(int c) {
