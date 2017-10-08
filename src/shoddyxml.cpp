@@ -115,6 +115,9 @@ void shoddyxml::parseInXML(int c) {
   } else if (strchr(" \t\r\n", c) == NULL) {
     status = INCHARACTER;
     unGetChar(c);
+    if (beginCharacter) {
+      beginCharacter();
+    }
   } else {
     /* do nothing */
   }
@@ -476,6 +479,9 @@ void shoddyxml::parseInCharacter(int c) {
   if (c == '<') {
     resetStatus();
     unGetChar(c);
+    if (endCharacter) {
+      endCharacter();
+    }
   } else {
     if (xmlStarted) {
       if (foundCharacter) {

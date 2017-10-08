@@ -25,7 +25,9 @@ class shoddyxml {
   void (*foundETag)(char *s);
   void (*foundEmptyElemTag)(char *s, int numAttributes, attribute_t attributes[]);
   void (*foundSection)(char *s);
+  void (*beginCharacter)();
   void (*foundCharacter)(char c);
+  void (*endCharacter)();
   void (*foundElement)(char *s);
 
   private:
